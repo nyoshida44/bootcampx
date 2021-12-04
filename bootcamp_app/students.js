@@ -2,7 +2,10 @@ require("dotenv").config();
 const { Pool } = require('pg');
 
 const args = process.argv;
-let cohort_request = args.slice(2);
+const cohort_request = args.slice(2);
+const cohort_result = cohort_request[0];
+const limit_result = cohort_request[1] || 5;
+const values = [`%${cohort_result}%`, limit_result];
 
 const pool = new Pool({
   user: process.env.DB_USER,
@@ -12,13 +15,14 @@ const pool = new Pool({
   port: process.env.DB_PORT
 });
 
-pool.query(`
+const queryString = `
 SELECT students.id, students.name, cohorts.name as cohort_name
 FROM students
 JOIN cohorts ON students.cohort_id = cohorts.id
-WHERE cohorts.name = '${cohort_request[0]}'
-LIMIT ${cohort_request[1] || 5};
-`)
+WHERE cohorts.name like $1
+LIMIT $2
+`
+pool.query(queryString, values)
 .then(res => {
   res.rows.forEach(user => {
     console.log(`${user.name} has an id of ${user.id} and was in the ${user.cohort_name} cohort`);
